@@ -13,12 +13,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { createReadStream } from 'fs';
 import { diskStorage } from 'multer';
 import { FilesService } from './files.service';
 import { fileNamer } from './helpers/fileNamer.helper';
 import { getMimeType } from './helpers/getMineType';
 @Controller('files')
+@ApiTags('Files - Get and Upload')
 export class FilesController {
   constructor(
     private readonly filesService: FilesService,

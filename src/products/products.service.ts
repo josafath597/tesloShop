@@ -1,3 +1,4 @@
+import { User } from '@app/auth/entities/user.entity';
 import { PaginationDto } from '@app/common/dtos/pagination.dto';
 import {
   BadRequestException,
@@ -24,15 +25,16 @@ export class ProductsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(createProductDto: CreateProductDto) {
+  async create(createProductDto: CreateProductDto, user: User) {
     try {
       const { images = [], ...productDetails } = createProductDto;
       const producto = this.productRepository.create({
         ...productDetails,
         images: images.map(image => this.productImageRepository.create({ url: image })),
+        user,
       });
       await this.productRepository.save(producto);
-      return { ...productDetails, images };
+      return producto;
     } catch (error) {
       this.handleDBExceptions(error);
     }
@@ -59,7 +61,8 @@ export class ProductsService {
       .where('product.title ILIKE :search', { search: `%${search}%` })
       .take(limit)
       .skip(skip)
-      .leftJoinAndSelect('product.images', 'images');
+      .leftJoinAndSelect('product.images', 'images')
+      .leftJoinAndSelect('product.user', 'user');
     const [products, total] = await queryBuilder.getManyAndCount();
     return {
       products: products.map(product => ({ ...product, images: product.images.map(img => img.url) })),
@@ -68,20 +71,22 @@ export class ProductsService {
   }
 
   async findOne(term: string) {
-    let product: Product;
+    const queryBuilder = this.productRepository.createQueryBuilder('product');
     if (isUUID(term)) {
-      product = await this.productRepository.findOneBy({ id: term });
+      queryBuilder.where('product.id = :id', { id: term });
     } else {
       // product = await this.productRepository.findOneBy({ slug: term });
-      const queryBuilder = this.productRepository.createQueryBuilder('products');
-      product = await queryBuilder
-        .where('UPPER(title) =:title or slug =:slug', {
-          title: term.toUpperCase(),
-          slug: term.toLowerCase(),
-        })
-        .leftJoinAndSelect('products.images', 'images')
-        .getOne();
+      queryBuilder.where('UPPER(product.title) = :title OR product.slug = :slug', {
+        title: term.toUpperCase(),
+        slug: term.toLowerCase(),
+      });
     }
+
+    // Añadir uniones para cargar imágenes y usuario
+    queryBuilder.leftJoinAndSelect('product.images', 'images');
+    queryBuilder.leftJoinAndSelect('product.user', 'user');
+    // Ejecutar la consulta
+    const product = await queryBuilder.getOne();
     if (!product) {
       throw new NotFoundException(`Product with id: ${term} not found`);
     }
@@ -96,7 +101,7 @@ export class ProductsService {
     };
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
+  async update(id: string, updateProductDto: UpdateProductDto, user: User) {
     const { images, ...toUpdate } = updateProductDto;
 
     const product = await this.productRepository.preload({
@@ -116,6 +121,8 @@ export class ProductsService {
         await queryRunner.manager.delete(ProductImagen, { product: { id } });
         product.images = images.map(image => this.productImageRepository.create({ url: image }));
       }
+      product.user = user;
+
       await queryRunner.manager.save(product);
       await queryRunner.commitTransaction();
       await queryRunner.release();
