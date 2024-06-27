@@ -24,23 +24,32 @@ export class ProductsController {
   }
 
   @Get()
+  @ApiResponse({ status: 200, description: 'Products paginated', type: [Product] })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.productsService.findAll(paginationDto);
   }
 
   @Get(':term')
+  @ApiResponse({ status: 200, description: 'Product found', type: Product })
+  @ApiResponse({ status: 404, description: 'Product with id, not found' })
   findOne(@Param('term') term: string) {
     return this.productsService.findOnePlain(term);
   }
 
   @Patch(':id')
   @Auth(ValidRoles.admin)
+  @ApiResponse({ status: 200, description: 'Product updated', type: Product })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Token related.' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateProductDto: UpdateProductDto, @GetUser() user: User) {
     return this.productsService.update(id, updateProductDto, user);
   }
 
   @Delete(':term')
   @Auth(ValidRoles.admin)
+  @ApiResponse({ status: 200, description: 'Product deleted' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Token related.' })
   remove(@Param('term', new ParseUUIDPipe()) id: string) {
     return this.productsService.remove(id);
   }
