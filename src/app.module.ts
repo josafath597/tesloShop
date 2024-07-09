@@ -8,6 +8,8 @@ import { FilesModule } from './files/files.module';
 import { ProductsModule } from './products/products.module';
 import { SeedModule } from './seed/seed.module';
 import { AuthModule } from './auth/auth.module';
+import { MessagesWsModule } from './messages-ws/messages-ws.module';
+import { CarsModule } from './cars/cars.module';
 
 @Module({
   imports: [
@@ -37,6 +39,10 @@ import { AuthModule } from './auth/auth.module';
     FilesModule,
 
     AuthModule,
+
+    MessagesWsModule,
+
+    CarsModule,
   ],
   controllers: [],
   providers: [],
